@@ -27,7 +27,6 @@ public static partial class Program
         app.UseSwagger();
         app.UseSwaggerUI();
         app.MapControllers();
-        //app.MapGet("/{id}", (DataContext _context, Guid id) => $"{id}");
         return app;
     }
 
