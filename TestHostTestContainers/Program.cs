@@ -1,17 +1,34 @@
 using Microsoft.EntityFrameworkCore;
 using TestHostTestContainers.Database;
 
-var builder = WebApplication.CreateBuilder(args);
+var app = WebApplication.CreateBuilder(args)
+    .ConfigureServices()
+    .CreateApplication();
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddDbContextPool<DataContext>(opts => 
-    opts.UseNpgsql(builder.Configuration.GetConnectionString("default")));
-
-var app = builder.Build();
-
-app.UseSwagger();
-app.UseSwaggerUI();
-app.MapControllers();
 app.Run();
+
+public static partial class Program
+{
+    public static WebApplicationBuilder ConfigureServices(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddMvc().AddApplicationPart(typeof(Program).Assembly).AddControllersAsServices();
+        builder.Services.AddControllers();
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+        builder.Services.AddDbContextPool<DataContext>(opts =>
+            opts.UseNpgsql(builder.Configuration.GetConnectionString("default")));
+        return builder;
+    }
+    
+    public static WebApplication CreateApplication(this WebApplicationBuilder webApplicationBuilder)
+    {
+        var app = webApplicationBuilder.Build();
+
+        app.UseSwagger();
+        app.UseSwaggerUI();
+        app.MapControllers();
+        //app.MapGet("/{id}", (DataContext _context, Guid id) => $"{id}");
+        return app;
+    }
+
+};
