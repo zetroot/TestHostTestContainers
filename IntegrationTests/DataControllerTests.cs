@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Refit;
@@ -9,7 +11,8 @@ namespace IntegrationTests;
 
 public class DataControllerTests
 {
-    private CustomAppFactory _factory = new();
+    private IContainer _pgContainer = null!;
+    private CustomAppFactory _factory = null!;
     private DataContext _context = null!;
     private HttpClient _client = null!;
     private IDataClient _refitClient = null!;
@@ -24,11 +27,38 @@ public class DataControllerTests
         _refitClient = RestService.For<IDataClient>(_client);
     }
 
+    [OneTimeSetUp]
+    public async Task SetupContainer()
+    {
+        const string postgresPwd = "pgpwd";
+        
+        _pgContainer = new ContainerBuilder()
+            .WithName(Guid.NewGuid().ToString("N"))
+            .WithImage("postgres:15")
+            .WithHostname("ci_test_database")
+            .WithExposedPort(5432)
+            .WithPortBinding(5432, true)
+            .WithEnvironment("POSTGRES_PASSWORD", postgresPwd)
+            .WithEnvironment("PGDATA", "/pgdata")
+            .WithTmpfsMount("/pgdata")
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("psql -U postgres -c \"select 1\""))
+            .Build();
+        await _pgContainer.StartAsync();
+        
+        _factory = new(_pgContainer.Hostname, _pgContainer.GetMappedPublicPort(5432), postgresPwd);
+    }
+
     [TearDown]
     public void TearDown()
     {
         _scope.Dispose();
         _client.Dispose();
+    }
+
+    [OneTimeTearDown]
+    public async Task DisposeContainer()
+    {
+        await _pgContainer.DisposeAsync();
     }
 
     [Test]

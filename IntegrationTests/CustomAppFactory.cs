@@ -3,12 +3,24 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using TestHostTestContainers.Database;
 
 namespace IntegrationTests;
 
 public class CustomAppFactory : WebApplicationFactory<Program>
 {
+    private readonly string _dbConnStr;
+
+    public CustomAppFactory(string host, int port, string password)
+    {
+        var sb = new NpgsqlConnectionStringBuilder
+        {
+            Host = host, Port = port, Database = "test_ci_database", Username = "postgres", Password = password
+        };
+        _dbConnStr = sb.ConnectionString;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureTestServices(services =>
@@ -19,7 +31,7 @@ public class CustomAppFactory : WebApplicationFactory<Program>
                 services.Remove(descriptor);
 
             // Зарегистрируем снова с указанием на тестовую БД
-            services.AddDbContextPool<DataContext>(opts => opts.UseNpgsql("Host=localhost;Database=test_ci_db;Username=postgres;Password=;"));
+            services.AddDbContextPool<DataContext>(opts => opts.UseNpgsql(_dbConnStr));
 
             // Обеспечим создание БД
             var serviceProvider = services.BuildServiceProvider();
