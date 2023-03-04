@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Refit;
@@ -10,31 +9,25 @@ namespace IntegrationTests;
 
 public class DataControllerTests
 {
-    private WebApplication _app = null!;
+    private CustomAppFactory _factory = new();
     private DataContext _context = null!;
     private HttpClient _client = null!;
     private IDataClient _refitClient = null!;
     private IServiceScope _scope = null!;
-
+    
     [SetUp]
-    public async Task Setup()
+    public void Setup()
     {
-        var builder = WebApplication.CreateBuilder()
-            .ConfigureServices();
-        _app = builder.CreateApplication();
-        _app.Urls.Add("http://*:8080");
-        await _app.StartAsync();
-        _scope = _app.Services.CreateScope();
+        _scope = _factory.Services.CreateScope();
         _context = _scope.ServiceProvider.GetRequiredService<DataContext>();
-        _client = new HttpClient { BaseAddress = new Uri("http://localhost:8080") };
+        _client = _factory.CreateClient();
         _refitClient = RestService.For<IDataClient>(_client);
     }
 
     [TearDown]
-    public async Task TearDown()
+    public void TearDown()
     {
         _scope.Dispose();
-        await _app.StopAsync();
         _client.Dispose();
     }
 

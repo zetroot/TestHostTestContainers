@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using TestHostTestContainers.Database;
 
-var app = WebApplication.CreateBuilder(args)
-    .ConfigureServices()
-    .CreateApplication();
+var builder = WebApplication.CreateBuilder(args);
+ConfigureServices(builder);
+var app = CreateApplication(builder);
 
 app.Run();
 
-public static partial class Program
+public partial class Program
 {
-    public static WebApplicationBuilder ConfigureServices(this WebApplicationBuilder builder)
+    public static WebApplicationBuilder ConfigureServices(WebApplicationBuilder builder)
     {
         builder.Services.AddMvc().AddApplicationPart(typeof(Program).Assembly).AddControllersAsServices();
         builder.Services.AddControllers();
@@ -20,7 +20,7 @@ public static partial class Program
         return builder;
     }
     
-    public static WebApplication CreateApplication(this WebApplicationBuilder webApplicationBuilder)
+    public static WebApplication CreateApplication(WebApplicationBuilder webApplicationBuilder)
     {
         var app = webApplicationBuilder.Build();
 
