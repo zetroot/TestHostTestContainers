@@ -35,7 +35,7 @@ public class DataControllerTests
         _pgContainer = new ContainerBuilder()
             .WithName(Guid.NewGuid().ToString("N"))
             .WithImage("postgres:15")
-            .WithHostname("ci_test_database")
+            .WithHostname(Guid.NewGuid().ToString("N"))
             .WithExposedPort(5432)
             .WithPortBinding(5432, true)
             .WithEnvironment("POSTGRES_PASSWORD", postgresPwd)
