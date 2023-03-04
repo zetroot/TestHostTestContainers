@@ -11,8 +11,10 @@ namespace IntegrationTests;
 public class DataControllerTests
 {
     private WebApplication _app = null!;
+    private DataContext _context = null!;
     private HttpClient _client = null!;
     private IDataClient _refitClient = null!;
+    private IServiceScope _scope = null!;
 
     [SetUp]
     public async Task Setup()
@@ -22,6 +24,8 @@ public class DataControllerTests
         _app = builder.CreateApplication();
         _app.Urls.Add("http://*:8080");
         await _app.StartAsync();
+        _scope = _app.Services.CreateScope();
+        _context = _scope.ServiceProvider.GetRequiredService<DataContext>();
         _client = new HttpClient { BaseAddress = new Uri("http://localhost:8080") };
         _refitClient = RestService.For<IDataClient>(_client);
     }
@@ -29,6 +33,7 @@ public class DataControllerTests
     [TearDown]
     public async Task TearDown()
     {
+        _scope.Dispose();
         await _app.StopAsync();
         _client.Dispose();
     }
@@ -47,26 +52,24 @@ public class DataControllerTests
     public async Task PostData_WhenCalled_ReturnsIdOfAddedRecord()
     {
         //arrange
-        var context = _app.Services.GetRequiredService<DataContext>();
-        var cntBefore = await context.Set<UserData>().CountAsync();
+        var cntBefore = await _context.Set<UserData>().CountAsync();
         
         //act
         var id = await _refitClient.Create("test creation");
         
         //assert
-        context.Set<UserData>().Count().Should().BeGreaterThan(cntBefore);
-        context.Set<UserData>().Any(x => x.Id == id).Should().BeTrue();
-        context.Set<UserData>().Single(x => x.Id == id).Data.Should().Be("test creation");
+        _context.Set<UserData>().Count().Should().BeGreaterThan(cntBefore);
+        _context.Set<UserData>().Any(x => x.Id == id).Should().BeTrue();
+        _context.Set<UserData>().Single(x => x.Id == id).Data.Should().Be("test creation");
     }
     
     [Test]
     public async Task GetData_WhenCalledForExistingId_ReturnsData()
     {
         //arrange
-        var context = _app.Services.GetRequiredService<DataContext>();
         var id = Guid.NewGuid();
-        context.Set<UserData>().Add(new UserData { Id = id, Data = "test get" });
-        await context.SaveChangesAsync();
+        _context.Set<UserData>().Add(new UserData { Id = id, Data = "test get" });
+        await _context.SaveChangesAsync();
         
         //act
         var actualData = await _refitClient.Get(id);
